@@ -12,35 +12,6 @@ class Decoded {
     }
 }
 
-class WritableStream {
-    private size: usize;
-    private buffer: Uint8Array;
-    private position: usize;
-
-    constructor(size: u32 = 1024) {
-        this.size = size;
-        this.buffer = new Uint8Array(size);
-        this.position = 0;
-    }
-
-    write(bytes: Uint8Array): void {
-        if (this.position + bytes.length > this.size) {
-            this.size = this.size * 2;
-            this.buffer = new Uint8Array(this.size);
-            this.write(bytes);
-        }
-        memory.copy(this.buffer + this.position, (bytes.buffer.data + bytes.byteOffset), bytes.byteLength);
-        this.position += bytes.length;
-    }
-
-    drain(): Uint8Array {
-        let res = new Uint8Array(this.position);
-        memory.copy(res.buffer.data, this.buffer.data, this.position);
-        this.position = 0;
-        return res;
-    }
-}
-
 /**
  * Parse integers. Check if there is no leading zeros
  * Note that this is NOT safe in assemblyscript due to
