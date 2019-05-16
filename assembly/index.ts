@@ -12,6 +12,35 @@ class Decoded {
     }
 }
 
+class WritableStream {
+    private size: usize;
+    private buffer: Uint8Array;
+    private position: usize;
+
+    constructor(size: u32 = 1024) {
+        this.size = size;
+        this.buffer = new Uint8Array(size);
+        this.position = 0;
+    }
+
+    write(bytes: Uint8Array): void {
+        if (this.position + bytes.length > this.size) {
+            this.size = this.size * 2;
+            this.buffer = new Uint8Array(this.size);
+            this.write(bytes);
+        }
+        memory.copy(this.buffer + this.position, (bytes.buffer.data + bytes.byteOffset), bytes.byteLength);
+        this.position += bytes.length;
+    }
+
+    drain(): Uint8Array {
+        let res = new Uint8Array(this.position);
+        memory.copy(res.buffer.data, this.buffer.data, this.position);
+        this.position = 0;
+        return res;
+    }
+}
+
 /**
  * Parse integers. Check if there is no leading zeros
  * Note that this is NOT safe in assemblyscript due to
@@ -40,11 +69,13 @@ function intToHex(integer: u32): string {
 }
 
 function bytesToHex(bytes: Uint8Array): string {
-    let arr = new Array<string>();
+    let res = new Uint8Array(bytes.length * 2);
     for (let i = 0; i < bytes.length; i++) {
-        arr.push(intToHex(bytes[i]));
+        let hex = intToHex(bytes[i]);
+        res[i*2] = hex.charCodeAt(0);
+        res[i*2+1] = hex.charCodeAt(1);
     }
-    return arr.join('');
+    return String.fromUTF8(res.buffer.data, res.byteLength);
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -52,35 +83,29 @@ function hexToBytes(hex: string): Uint8Array {
         return null;
     }
     assert(hex.length % 2 == 0);
-    let byte_length = hex.length / 2;
-    let res = new Uint8Array(byte_length);
-    for (let i = 0; i < byte_length; i++) {
+    let byteLength = hex.length / 2;
+    let res = new Uint8Array(byteLength);
+    for (let i = 0; i < byteLength; i++) {
         res[i] = parseI32(hex.substr(i*2, 2), 16) as u8;
     }
     return res;
 }
 
 function concatUint8Array(arr1: Uint8Array, arr2: Uint8Array): Uint8Array {
-    let len = arr1.length + arr2.length;
+    let len = arr1.byteLength + arr2.byteLength;
     let res = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        if (i < arr1.length) {
-            res[i] = arr1[i];
-        } else {
-            res[i] = arr2[i-arr1.length];
-        }
-    }
+    memory.copy(res.buffer.data, arr1.buffer.data + arr1.byteOffset, arr1.byteLength);
+    memory.copy(res.buffer.data + arr1.length, arr2.buffer.data + arr2.byteOffset, arr2.byteLength);
     return res;
 }
 
 function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
-    let len = arrays.reduce<u32>(((acc, x) => acc + x.length), 0);
+    let len = arrays.reduce<u32>(((acc, x) => acc + x.byteLength), 0);
     let res = new Uint8Array(len);
     let counter = 0;
     for (let i = 0; i < arrays.length; i++) {
-        for (let j = 0; j < arrays[i].length; j++) {
-            res[counter++] = arrays[i][j];
-        }
+        memory.copy(res.buffer.data + counter, arrays[i].buffer.data + arrays[1].byteOffset, arrays[i].byteLength);
+        counter += arrays[i].byteLength;
     }
     return res;
 }

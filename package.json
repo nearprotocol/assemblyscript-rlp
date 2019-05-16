@@ -10,7 +10,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "assemblyscript": "nearprotocol/assemblyscript",
+    "assemblyscript": "assemblyscript/assemblyscript",
     "typescript": "^3.1.6",
     "as-pect": "jtenner/as-pect"
   }
